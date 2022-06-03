@@ -38,7 +38,7 @@ def get_MNIST(data_dir, batch_size, num_workers):
 
 class MNISTPair:
 
-    def __init__(self, root, sumflag=True, is_train=True):
+    def __init__(self, root, is_train=True):
         np.random.seed(100)
         root = root + '/mnist_train.csv' if is_train else root+'/mnist_test.csv'
         xy = np.loadtxt(root, delimiter=',', dtype=np.float32)
@@ -47,11 +47,9 @@ class MNISTPair:
         self.len = xy.shape[0]
         self.x_data = xy[:, 1:]
         self.y_data = xy[:, 0]
-        self.sumflag = sumflag
-        if sumflag:
-            labels = np.arange(19)
-        else:
-            labels = np.arange(-9, 10)
+
+        labels = np.arange(19)
+        
         self.labelmap = {k:v for v,k in enumerate(labels)}
 
         if is_train:
@@ -73,10 +71,7 @@ class MNISTPair:
         l1 = self.y_data[index]
         l2 = self.y_data[index+1]
 
-        if self.sumflag:
-            label = torch.LongTensor([self.labelmap[l1+l2]])[0]
-        else:
-            label = torch.from_numpy(self.labelmap[l1-l2]).long()
+        label = torch.LongTensor([self.labelmap[l1+l2]])[0]
 
         #import pdb; pdb.set_trace()
 
@@ -84,6 +79,62 @@ class MNISTPair:
         d2 = self.transform(d2.reshape(28,28,1))
 
         return (d1,d2,label)
+
+    def __len__(self):
+        return self.len-1
+
+
+class MNISTPairv2:
+
+    def __init__(self, root, is_train=True):
+        np.random.seed(100)
+        root = root + '/mnist_train.csv' if is_train else root+'/mnist_test.csv'
+        xy = np.loadtxt(root, delimiter=',', dtype=np.float32)
+        np.random.shuffle(xy)
+
+        self.len = xy.shape[0]
+        self.x_data = xy[:, 1:]
+        self.y_data = xy[:, 0]
+    
+        sumlabels = np.arange(19)
+        sublabels = np.arange(-9, 10)
+
+        self.sumlabelmap = {k:v for v,k in enumerate(sumlabels)}
+        self.sublabelmap = {k:v for v,k in enumerate(sublabels)}
+
+        if is_train:
+            self.transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,))
+            ])
+        else:
+            self.transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.1307,), (0.3081,))
+            ])
+
+    def __getitem__(self, index):
+        d1 = self.x_data[index]
+        d2 = self.x_data[index+1]
+
+        l1 = self.y_data[index]
+        l2 = self.y_data[index+1]
+
+        p = np.random.random()
+
+        if p > .5:
+            label = torch.LongTensor([self.sumlabelmap[l1+l2]])[0]
+            sumtensor = torch.FloatTensor([1])
+        else:
+            label = torch.LongTensor([self.sublabelmap[l1-l2]])[0]
+            sumtensor = torch.FloatTensor([0])
+
+        #import pdb; pdb.set_trace()
+
+        d1 = self.transform(d1.reshape(28,28,1))
+        d2 = self.transform(d2.reshape(28,28,1))
+
+        return (d1, d2, sumtensor, label)
 
     def __len__(self):
         return self.len-1

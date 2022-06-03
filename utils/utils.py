@@ -115,9 +115,6 @@ def get_testargs():
     parser.add_argument('--dataroot', type=str, default='exp', metavar='N',
                         help='Path of the root dir of image dataset')
                         
-    parser.add_argument('--classification_type', type=str, default='gender', metavar='N',
-                        choices = ['gender', 'haircolor', 'multitask'], help='which classification you want to train')
-    
     parser.add_argument('--exp_name', type=str, default='exp', metavar='N',
                         help='Name of the experiment')
     
@@ -126,6 +123,12 @@ def get_testargs():
                         
     parser.add_argument('--ckpt', type=str, default='best', metavar='batch_size',
                         choices = ['best', 'latest'], help='Size of batch)')
+
+    parser.add_argument('--num_classes', type=int, default=10,
+                        help='num of target labels')
+    
+    parser.add_argument('--issum', type=bool, default=False,
+                        help='True to calculate sum, false to calculate subtract')
                         
     args = parser.parse_args()
     return args
