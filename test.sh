@@ -12,8 +12,8 @@
 ###### task 2 #######
 python -m src_task2.test_exp1 \
     --dataroot /home/suparna/work/dataset \
-    --exp_name exp1_task2_run1 \
+    --exp_name task2_exp1_run1 \
     --batch_size 20 \
     --ckpt best \
-    --num_classes 19 \
-    --issum True
+    --num_classes 28 \
+    #--issum True

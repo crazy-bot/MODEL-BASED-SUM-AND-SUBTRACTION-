@@ -54,7 +54,7 @@ class Trainer:
         if isresume and os.path.exists(ckpt_dir+'/best_epoch.pt'):
             self.encoder.load_state_dict(torch.load(ckpt_dir+'/best_epoch.pt'))
 
-        cls_weights = get_weights_MNIST()
+        cls_weights = get_weights_MNIST('data/map_sum.npy')
         self.cls_weights = torch.from_numpy(cls_weights)
         params =  list(self.encoder.parameters()) + list(self.decoder.parameters())
         self.optimizer = torch.optim.Adam(params, lr=lr, weight_decay=0.01)

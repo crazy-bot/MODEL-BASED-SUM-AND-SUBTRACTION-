@@ -63,7 +63,26 @@ if __name__ == '__main__':
 
     w2 = np.load('data/map_sub.npy', allow_pickle=True)
 
-    print(w1, w2 )
+
+    # calculated combined weights
+    map_all = defaultdict(list)
+    for k,v in map_sum.items():
+        map_all[k].extend(v)
+    for k,v in map_sub.items():
+        map_all[k].extend(v)
+
+    all_weights = calculate_weights(map_all)
+
+    outfile = open( 'data/map_all.txt', 'w' )
+    for key, value in sorted( map_all.items() ):
+        outfile.write( str(key) + '\t' + str(value) + '\n' )
+    outfile.close()
+    np.save('data/map_all.npy', all_weights)
+
+    w3 = np.load('data/map_sub.npy', allow_pickle=True)
+    
+
+    print(w1, w2, w3 )
 
     
     

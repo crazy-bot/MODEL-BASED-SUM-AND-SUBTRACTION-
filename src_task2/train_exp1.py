@@ -50,6 +50,7 @@ class Trainer:
         train_dset, val_dset = random_split(dset, [tl, length-tl])
         self.train_loader = DataLoader(train_dset, batch_size=batch_size, num_workers=0, shuffle=True)
         self.val_loader = DataLoader(val_dset, batch_size=batch_size, num_workers=4, shuffle=False)
+        self.dset = dset
 
         print('train loader size', len(self.train_loader))
         print('val loader size', len(self.val_loader))
@@ -61,7 +62,7 @@ class Trainer:
         if isresume and os.path.exists(ckpt_dir+'/best_epoch.pt'):
             self.clf.load_state_dict(torch.load(ckpt_dir+'/best_epoch.pt'))
 
-        cls_weights = get_weights_MNIST()
+        cls_weights = get_weights_MNIST('data/map_all.npy')
         self.cls_weights = torch.from_numpy(cls_weights)
         
         self.optimizer = torch.optim.Adam(self.clf.parameters(), lr=lr, weight_decay=0.01)
@@ -84,13 +85,13 @@ class Trainer:
         train_loss = 0
         predlist = []
         labellist = []
-        for i , (data1, data2, sumtensor, label) in enumerate(self.train_loader):
+        for i , (data1, data2, flag, label, l1, l2) in enumerate(self.train_loader):
 
-            data1, data2, sumtensor, label = data1.to(self.device), data2.to(self.device), sumtensor.to(self.device), label.to(self.device)
+            data1, data2, flag, label = data1.to(self.device), data2.to(self.device), flag.to(self.device), label.to(self.device)
             #import pdb; pdb.set_trace()
-            pred = self.clf(data1, data2, sumtensor)
+            pred = self.clf(data1, data2, flag)
             
-            loss = F.cross_entropy(pred, label, weight = self.cls_weights)
+            loss = F.cross_entropy(pred, label, weight=self.cls_weights)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -126,17 +127,21 @@ class Trainer:
 
         self.clf.eval()
         val_loss = 0
-        predlist = []
-        labellist = []
-        for i , (data1, data2, sumtensor, label) in enumerate(self.val_loader):
+        predlist, labellist, flaglist, l1list, l2list = [],[],[],[],[]
 
-            data1, data2, sumtensor, label = data1.to(self.device), data2.to(self.device), sumtensor.to(self.device), label.to(self.device)
-            pred = self.clf(data1, data2, sumtensor)
-            loss = F.cross_entropy(pred, label, weight = self.cls_weights)
+        for i , (data1, data2, flag, label, l1, l2) in enumerate(self.val_loader):
+
+            data1, data2, flag, label = data1.to(self.device), data2.to(self.device), flag.to(self.device), label.to(self.device)
+            pred = self.clf(data1, data2, flag)
+            loss = F.cross_entropy(pred, label, weight=self.cls_weights)
             val_loss += loss.item()
             pred = torch.argmax(pred, dim=1)
-            predlist.extend(pred.cpu().numpy())
-            labellist.extend(label.cpu().numpy())
+
+            predlist.extend(pred.detach().cpu().numpy())
+            labellist.extend(label.detach().cpu().numpy())
+            flaglist.extend(flag.detach().cpu().numpy())
+            l1list.extend(l1.numpy())
+            l2list.extend(l2.numpy())
 
             if i%100 == 0:
                 log = 'Validation epoch:{} iteration: {} loss:{}'.format(epoch, i, loss)
@@ -145,8 +150,18 @@ class Trainer:
         time_str = 'Validation end:' + ctime(time())
         io.cprint(time_str)
 
-        val_loss /= len(self.val_loader)
-        
+        # save output
+        f = open( out_dir + '/epoch_%s.log'%(str(epoch)), 'w')
+        txt = 'flag     label1      label2      GT      pred \n'
+        f.write(txt)
+        for i in range(len(predlist)):
+            target = self.dset.idxtolabel[ labellist[i] ]
+            predlabel = self.dset.idxtolabel[ predlist[i] ]
+            txt = '%d         %d        %d        %d        %d \n'%(flaglist[i], l1list[i], l2list[i], target, predlabel)
+            f.write(txt)
+        f.close()
+
+        val_loss /= len(self.val_loader)        
         report = classification_report(labellist, predlist)
         prec = precision_score(labellist, predlist, average = 'weighted')
         recall = recall_score(labellist, predlist, average = 'weighted')
@@ -156,6 +171,7 @@ class Trainer:
             'report': report,
             'loss': val_loss
         }
+        
         return pack
 
     def train(self, io):

@@ -134,8 +134,8 @@ class TwoTowerModelExtended(nn.Module):
 
         self.featnet =  nn.Sequential(conv1, conv2, conv3)
 
-        self.conv4 = ConvBlock(128, 64, 3, 1, 0) # 64*3*3
-        fc1 = LinearBlock(3*3*64+1, 3*3*32)
+        #self.conv4 = ConvBlock(128, 64, 3, 1, 0) # 64*3*3
+        fc1 = LinearBlock(3201, 3*3*32)
         fc2 = LinearBlock(3*3*32, 3*3*16)
         fc3 = LinearBlock(3*3*16, out_channel)
 
@@ -145,12 +145,12 @@ class TwoTowerModelExtended(nn.Module):
 
         feat1 = self.featnet(input1)
         feat2 = self.featnet(input2)
+        feat1 = torch.flatten(feat1, start_dim=1)
+        feat2 = torch.flatten(feat2, start_dim=1)
+
         #import pdb; pdb.set_trace()
 
-        x = torch.cat((feat1, feat2), dim=1)
-        x = self.conv4(x)
-        x = torch.flatten(x, start_dim=1)
-        x = torch.cat((x, flag), dim=1)
+        x = torch.cat((feat1, feat2, flag), dim=1)
 
         out = self.classifier(x)
 
